@@ -1,5 +1,7 @@
 # 🌲 Boosting mit Lag-Merkmalen – ein Modell für alle Depots
 
+**[→ Demo live ausprobieren](https://sebastianhanisch-boosting-forecast-demo.streamlit.app/)**
+
 Sechstes Stück der **Zeitreihen-Prognose-Linie** der "Konzepte"-Reihe im Portfolio von [Sebastian Hanisch](https://sebastianhanisch.net) – Operations Research und Machine Learning. Das **erste globale Modell** und die **erste überwachte Lernaufgabe** der Linie: Nachfolger der [Dynamischen Regression](https://github.com/sebastian-hanisch/dynamic-regression-demo), die für jedes Depot ein eigenes Modell schätzte.
 Geplant sind fünf weitere Stücke (Prognoseintervalle, Hierarchische Abstimmung, Kombination, Prognose → Bestand, ein vortrainiertes Netz; noch nicht gebaut).
 
