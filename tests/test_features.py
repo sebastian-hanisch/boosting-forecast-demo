@@ -84,3 +84,24 @@ def test_test_rows_cover_every_origin_and_horizon(port):
     d, o, h, org = F.test_rows(port, np.arange(2), 5)
     assert org[0] == C.FIRST_TEST and org[-1] + 5 == C.N_DAYS and len(d) == 2 * len(org) * 5
     assert np.array_equal(h[:10], [1, 2, 3, 4, 5, 1, 2, 3, 4, 5]) and np.array_equal(o[:6], [730] * 5 + [731]) and d[len(d) // 2] == 1
+
+
+def test_validation_rows_have_targets_only_in_the_validation_window(port):
+    """Regression: the validation origins start at 670 - h + 1, so without first_target a target day 670 - h + 1 .. 669 (training period) could be drawn."""
+    cut, end = 670, C.FIRST_TEST
+    for h in (1, 7, 14, 28):
+        feasible = {(t, j) for t in range(cut - h + 1, end - h + 1, 4) for j in range(1, h + 1) if cut <= t + j - 1 < end}   # reference by loop
+        d, o, hor = F.training_rows(port, np.arange(3), h, stride=4, per_origin=1, first=cut - h + 1, last_target=end, first_target=cut, seed=3)
+        assert set(zip(o.tolist(), hor.tolist())) <= feasible
+        s = o + hor - 1
+        assert s.min() >= cut and s.max() < end
+        assert len(d) == 3 * len(np.arange(cut - h + 1, end - h + 1, 4))
+        # the old window (no first_target) did contain training-period targets for h > 1
+        _, o0, h0 = F.training_rows(port, np.arange(3), h, stride=4, per_origin=40, first=cut - h + 1, last_target=end, seed=3)
+        assert (h == 1) == bool(((o0 + h0 - 1) >= cut).all())
+
+
+def test_first_target_none_keeps_the_training_draw_unchanged(port):
+    a = F.training_rows(port, np.arange(3), 14, stride=4, per_origin=2, last_target=670, seed=1)
+    ref = np.random.default_rng(1).integers(1, 15, size=len(a[0]))
+    assert np.array_equal(a[2], ref)

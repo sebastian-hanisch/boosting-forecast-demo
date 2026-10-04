@@ -100,11 +100,11 @@ def _baselines(key, horizon, hist=None):
 
 
 def train_model(port, depots, s, seed=0):
-    """Globales Modell auf den Zeilen der angegebenen Depots (Zieltage vor Tag 730 - VAL_DAYS); Rückgabe: Modell, Lernkurven (Training, Validierung), Merkmalsnamen."""
+    """Globales Modell auf den Zeilen der angegebenen Depots (Training: Zieltage vor Tag 730 - VAL_DAYS; Validierung: Zieltage ab Tag 730 - VAL_DAYS, also nie ein Tag, der als Ziel im Training vorkommt); Rückgabe: Modell, Lernkurven (Training, Validierung), Merkmalsnamen."""
     h = s.horizon
     d, o, hor = F.training_rows(port, depots, h, stride=4, per_origin=2, last_target=C.FIRST_TEST - VAL_DAYS, seed=seed)
     X, y, _ = F.build(port, d, o, hor, s.groups, s.norm)
-    vd, vo, vh = F.training_rows(port, depots, h, stride=4, per_origin=1, first=C.FIRST_TEST - VAL_DAYS - h + 1, last_target=C.FIRST_TEST, seed=seed + 1)
+    vd, vo, vh = F.training_rows(port, depots, h, stride=4, per_origin=1, first=C.FIRST_TEST - VAL_DAYS - h + 1, last_target=C.FIRST_TEST, first_target=C.FIRST_TEST - VAL_DAYS, seed=seed + 1)
     Xv, yv, _ = F.build(port, vd, vo, vh, s.groups, s.norm)
     ens, curve_train, curve_val = G.fit(X, y, num_leaves=s.leaves, n_rounds=s.rounds, learning_rate=s.lr, min_child_samples=s.min_leaf, seed=seed, X_val=Xv, y_val=yv)
     return ens, curve_train, curve_val, F.feature_names(s.groups, s.norm)

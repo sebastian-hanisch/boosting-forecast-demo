@@ -150,3 +150,28 @@ def test_gbm_forecast_ignores_the_future_of_the_series(analysis):
     assert np.allclose(F.to_orders(G.predict(a.model, X1), l1), F.to_orders(G.predict(a.model, X2), l2))
     i = t - a.origins[0]
     assert np.allclose(a.forecasts["gbm"][3, i], F.to_orders(G.predict(a.model, X1), l1))
+
+
+def test_training_and_validation_targets_do_not_overlap(port, monkeypatch):
+    """Regression: the validation curve must not be computed on target days the model was trained on (training: targets < 670, validation: 670..729)."""
+    import bf_features as F
+    calls = []
+    real = F.training_rows
+
+    def spy(*args, **kw):
+        out = real(*args, **kw)
+        calls.append(out)
+        return out
+
+    monkeypatch.setattr(E.F, "training_rows", spy)
+    cut = C.FIRST_TEST - E.VAL_DAYS
+    for h in (7, 14, 28):
+        calls.clear()
+        s = E.Settings(n_depots=4, horizon=h, rounds=3)
+        E.train_model(port, np.arange(4), s)
+        (td, to, th), (vd, vo, vh) = calls
+        train_targets = set(zip(td.tolist(), (to + th - 1).tolist()))
+        val_targets = set(zip(vd.tolist(), (vo + vh - 1).tolist()))
+        assert max(t for _, t in train_targets) < cut
+        assert min(t for _, t in val_targets) >= cut and max(t for _, t in val_targets) < C.FIRST_TEST
+        assert not train_targets & val_targets

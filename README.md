@@ -3,7 +3,7 @@
 **[→ Demo live ausprobieren](https://sebastianhanisch-boosting-forecast-demo.streamlit.app/)**
 
 Sechstes Stück der **Zeitreihen-Prognose-Linie** der "Konzepte"-Reihe im Portfolio von [Sebastian Hanisch](https://sebastianhanisch.net) – Operations Research und Machine Learning. Das **erste globale Modell** und die **erste überwachte Lernaufgabe** der Linie: Nachfolger der [Dynamischen Regression](https://github.com/sebastian-hanisch/dynamic-regression-demo), die für jedes Depot ein eigenes Modell schätzte.
-Geplant sind fünf weitere Stücke (Prognoseintervalle, Hierarchische Abstimmung, Kombination, Prognose → Bestand, ein vortrainiertes Netz; noch nicht gebaut).
+Die fünf weiteren Stücke der Linie (Prognoseintervalle, Hierarchische Abstimmung, Kombination, Prognose → Bestand, ein vortrainiertes Netz) sind inzwischen gebaut.
 
 Bisher bekam **jedes Depot sein eigenes Modell**. Ein **globales Modell** dreht das um: **ein** Gradient-Boosting-Modell lernt aus den Lags, dem Kalender und dem Aktionsplan **aller Depots gemeinsam** und prognostiziert jedes einzelne. Die Demo zeigt auf einem **Portfolio von Depots** (dieselben Tagesaufträge wie in den Vorgängern, jetzt mit eigenen Parametern je Depot), was das bringt und wann nicht:
 welche Merkmale zählen, **wie viele Depots** das Modell braucht, wie es einem **neuen Depot mit kurzer Historie** hilft und wo Bäume an **Trends** scheitern. Die Baumbibliothek ist selbst geschrieben (numpy, der Histogramm-Kern aus dem [LightGBM-Stück](https://github.com/sebastian-hanisch/lightgbm-demo)) und im Test gegen `sklearn` geprüft.
@@ -25,7 +25,7 @@ Der Plan der Linie erwartete: "Das Boosting schlägt die lokalen Verfahren, weil
 - **Das Portfolio** (`bf_scenario.py`): 1 095 Tage je Depot (Ursprünge im letzten Jahr, ab Tag 730), wie in den Vorgängern multiplikativ aufgebaut (Niveau, Trend, Wochenmuster, Jahresmuster, Feiertage, Aktionen, log-normales Rauschen), aber mit eigenen Parametern je Depot (Niveau 30–500, Rauschen, Stärke von Wochen- und Jahresmuster, Trend). Feiertage gelten für alle Depots, Aktionstage nur je Depot. Der Erwartungswert je Tag ist das **Orakel**.
 - **Zeilen und Merkmale** (`bf_features.py`): eine Zeile ist ein Tripel (Depot, Ursprung $t$, Horizont $j$), Ziel der Wert am Zieltag $s = t + j - 1$ – ein **direktes** Mehrschritt-Modell, der Horizont ist ein Merkmal. **Lags:** die letzten sieben Tage, die letzten vier Werte des Zielwochentags (im Abstand von Wochen, alle vor $t$), 7-Tage-Mittel durch 28-Tage-Niveau, 28- durch 91-Tage-Niveau, die Streuung.
   **Kalender:** Wochentag, $\sin/\cos$ des Jahrestags, Feiertag, Tag danach, Horizont. **Aktionsplan:** Aktion am Zieltag, Anteil der Aktionstage in den letzten sieben Tagen. **Ziel** (Regler): $\log\frac{y_s + 1}{\ell + 1}$ mit dem 28-Tage-Niveau $\ell$ (oder dem Wochentagsmittel der letzten vier Wochen) – oder der rohe Wert.
-- **Boosting** (`bf_gbm.py`, `bf_tree.py`): quadratischer Fehler, $F_m = F_{m-1} + \eta f_m$, Bäume blattweise auf den Residuen (Hesse 1), Blattwert $-G/(H+\lambda)$, 63 Quantil-Bins, Differenz-Trick. Training auf 2 Ursprüngen je Depot alle 4 Tage (Zieltage vor Tag 670); die Tage 670–729 sind die Validierung der Lernkurve.
+- **Boosting** (`bf_gbm.py`, `bf_tree.py`): quadratischer Fehler, $F_m = F_{m-1} + \eta f_m$, Bäume blattweise auf den Residuen (Hesse 1), Blattwert $-G/(H+\lambda)$, 63 Quantil-Bins, Differenz-Trick. Training auf 2 Ursprüngen je Depot alle 4 Tage (Zieltage vor Tag 670); die Validierung der Lernkurve sind Zeilen mit Zieltagen ausschließlich in den Tagen 670–729 (Ursprünge ab Tag 670 − Horizont + 1, aber nur Horizonte mit Zieltag ≥ 670), also keine Zieltage aus dem Training.
 - **Lokale Vergleichsverfahren** (`bf_baselines.py`): Wochenmittel über vier Wochen (Stück 1), Holt-Winters multiplikativ (Stück 2), OLS im Log auf Wochentage, Trend, zwei Fourier-Paare, Feiertag, Tag danach, Aktion (Stück 4) – alle je Depot auf den 730 Trainingstagen.
 - **Kennzahl** (`bf_evaluation.py`): **MASE** je Depot (MAE über alle Ursprünge und Horizonte des Testjahres, geteilt durch den saisonal naiven Trainingsfehler), gemittelt über die Depots. Das **Orakel** ist die Prognose "wahrer Erwartungswert".
 
@@ -33,7 +33,7 @@ Der Plan der Linie erwartete: "Das Boosting schlägt die lokalen Verfahren, weil
 
 - **Handrechnungen:** ein Split (Gain $\tfrac12(\tfrac43 + \tfrac43)$, Blattwerte $\pm\tfrac23$) und eine Boosting-Runde ($F_0 = 2$, Blätter $-\tfrac43$ / $+\tfrac43$ bei Lernrate 1); eine Merkmalszeile Wert für Wert (Lags, Wochentags-Lags für Horizonte 1 bis 28, Kalender, Aktion, Ziel); die Rückrechnung des Ziels für alle drei Zielvarianten; MASE-Nenner und Kennzahlen auf kleinen Beispielen.
 - **Gegenprobe:** das Boosting gegen `sklearn.ensemble.HistGradientBoostingRegressor` (gleiche Blätter, Lernrate, Mindestzeilen, $\lambda$, Bins): der mittlere absolute Testfehler weicht um weniger als 6 % ab (in der Entwicklung 0,1232 gegen 0,1235); die Regression je Depot gegen eine Schleife und `numpy.linalg.lstsq`.
-- **Eigenschaften:** der quadratische Fehler fällt mit jeder Runde; die Gain-Anteile summieren sich auf 1 und finden das einzige relevante Merkmal; **seltene Binärmerkmale (3 % Einsen) sind teilbar**; die Merkmale einer Zeile ändern sich nicht, wenn die Reihe ab dem Ursprung überschrieben wird; die Prognose auch nicht.
+- **Eigenschaften:** der quadratische Fehler fällt mit jeder Runde; die Gain-Anteile summieren sich auf 1 und finden das einzige relevante Merkmal; **seltene Binärmerkmale (3 % Einsen) sind teilbar**; die Merkmale einer Zeile ändern sich nicht, wenn die Reihe ab dem Ursprung überschrieben wird; die Prognose auch nicht; die Zieltage der Validierung (670–729) kommen im Training nicht vor.
 - **Ein Fund am Baumkern:** die Bin-Grenzen des LightGBM-Stücks lagen für seltene oder diskrete Merkmale so, dass Schwelle und Bin nicht zusammenpassten (die Merkmale waren unteilbar, das Modell ignorierte den Wochentag: MASE 1,47 statt 0,79). Der Kern hier bestimmt die Bins mit `side="left"`; derselbe Fehler steckt im LightGBM-Stück.
 - **Statistik:** die Experimente mitteln über **drei feste Seeds** (Fehlerbalken = Standardfehler); die Preset-Zeilen sind **Einzelportfolios** (Seed 3).
 - **Literatur** (nicht nachgebaut): Friedman 2001 (Gradient Boosting); Ke et al. 2017 (LightGBM); Montero-Manso/Hyndman 2021 (globale gegen lokale Modelle); Januschowski et al. 2020 (Kriterien für die Modellwahl).
@@ -59,16 +59,16 @@ Die Preset-Zeilen sind **Einzelportfolios** (Seed 3); belastbar sind die Zeilen 
 
 | Annahme | Was passiert, wenn sie verletzt ist | Wer setzt an |
 |---|---|---|
-| **Es gibt viele ähnliche Reihen** | Aus einem oder wenigen Depots lernt das Modell nicht genug; unähnliche Depots ziehen sich gegenseitig herunter. | Hierarchische Abstimmung, Kombination (geplant) |
+| **Es gibt viele ähnliche Reihen** | Aus einem oder wenigen Depots lernt das Modell nicht genug; unähnliche Depots ziehen sich gegenseitig herunter. | Hierarchische Abstimmung (Stück 8), Kombination (Stück 9) |
 | **Die Form ist unbekannt** | Kennt man die Form, schlägt das einfache Modell mit den passenden Regressoren das Boosting; das Boosting gewinnt bei unbekannter oder verwickelter Form und bei kurzen Historien. | Dynamische Regression (Stück 4) |
 | **Bäume können extrapolieren** | Sie können es nicht: ohne Normierung auf das Niveau scheitern sie an Trends. | Normierung, Regression mit Trend |
 | **Der Zufall ist klein** | Überanpassung bei zu vielen Runden und Blättern; hier nur mit einer Validierung und drei Seeds geprüft, keine Kreuzvalidierung, keine Abstimmung der Parameter. | Regularisierung, Suche |
-| **Punktprognosen genügen** | Das Modell liefert einen Wert je Zeile. | Prognoseintervalle (geplant) |
+| **Punktprognosen genügen** | Das Modell liefert einen Wert je Zeile. | Prognoseintervalle (Stück 7) |
 | **Erzeugte Portfolios, drei Seeds** | Das Vehikel erzeugt genau die Muster (multiplikativ, log-normal, Aktionen 50 % Zuschlag); echte Portfolios sind unordentlicher. Die Zahlen gelten für diese Portfolios. | – |
 
 ## Tests
 
-Pytest-Suite (`pytest tests/ -v`, 76 Tests, einige Minuten wegen der Experimente): Baumkern und Boosting von Hand, gegen `sklearn` und in ihren Eigenschaften (fallender Fehler, Gain-Anteile, seltene Binärmerkmale), die Merkmale Wert für Wert und ohne Blick in die Zukunft, die lokalen Verfahren gegen Schleifen und `lstsq`, das Portfolio, die Auswertung (Formen, Orakel, MASE, Unabhängigkeit von der Zukunft),
+Pytest-Suite (`pytest tests/ -v`, 79 Tests, einige Minuten wegen der Experimente): Baumkern und Boosting von Hand, gegen `sklearn` und in ihren Eigenschaften (fallender Fehler, Gain-Anteile, seltene Binärmerkmale), die Merkmale Wert für Wert und ohne Blick in die Zukunft, die lokalen Verfahren gegen Schleifen und `lstsq`, das Portfolio, die Auswertung (Formen, Orakel, MASE, Unabhängigkeit von der Zukunft),
 Preset- und Permalink-Klemmen, AppTest-Rauchtests (Standard, jedes Preset, Depot- und Ursprungs-Regler, leere Merkmalsauswahl, Extremwerte, vier Experimente auf Abruf, keine unaufgelösten Platzhalter) und `test_claims.py` (jede Zahl aus diesem README und aus den Preset-Hinweisen mit Bändern und Rangfolgen; die Bäume können sich bei Gleichständen zwischen Plattformen um Rundung verschieben).
 
 ## Dateistruktur
@@ -102,3 +102,7 @@ streamlit run app.py
 ```
 
 Gebaut mit Streamlit, Plotly und numpy (Gegenprobe im Test: scikit-learn).
+
+---
+
+Diese Demo ist Teil des Portfolios von [Sebastian Hanisch](https://sebastianhanisch.net) – Operations Research und Machine Learning ([Über mich](https://sebastianhanisch.net/ueber-mich.html)). Mehr zur Reihe: [Zeitreihen-Prognose: von Naiv bis Vortraining](https://sebastianhanisch.net/konzepte-zeitreihen-prognose.html).

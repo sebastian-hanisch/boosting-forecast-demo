@@ -75,13 +75,17 @@ def to_orders(pred, lvl28, normalize=True):
     return np.maximum(np.exp(pred) * (lvl28 + 1.0) - 1.0, 0.0) if normalize else np.maximum(pred, 0.0)
 
 
-def training_rows(port, depots, horizon, stride=4, per_origin=2, first=FIRST_ORIGIN, last_target=C.FIRST_TEST, seed=0):
-    """Zeilen für das Training: je Depot alle stride Tage ein Ursprung, je Ursprung per_origin zufällige Horizonte; der Zieltag liegt vor last_target."""
+def training_rows(port, depots, horizon, stride=4, per_origin=2, first=FIRST_ORIGIN, last_target=C.FIRST_TEST, seed=0, first_target=None):
+    """Zeilen für das Training: je Depot alle stride Tage ein Ursprung, je Ursprung per_origin zufällige Horizonte; der Zieltag liegt vor last_target.
+    Mit first_target (für die Validierung) werden nur Horizonte gezogen, deren Zieltag t + j - 1 mindestens first_target ist; dazu muss der erste Ursprung mindestens first_target - horizon + 1 sein."""
     rng = np.random.default_rng(seed)
     org = np.arange(first, last_target - horizon + 1, stride)
     d = np.repeat(np.asarray(depots), len(org) * per_origin)
     o = np.tile(np.repeat(org, per_origin), len(depots))
-    h = rng.integers(1, horizon + 1, size=len(d))
+    if first_target is None:
+        h = rng.integers(1, horizon + 1, size=len(d))
+    else:
+        h = rng.integers(np.maximum(1, first_target - o + 1), horizon + 1)
     return d, o, h
 
 

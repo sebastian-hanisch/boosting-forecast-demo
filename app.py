@@ -149,7 +149,7 @@ with g2:
     st.plotly_chart(build_curve(a), width="stretch", key="curve_chart")
 best_round = int(np.argmin(a.curve_val)) + 1
 st.caption(
-    f"Links: Anteil am Gain (Verbesserung der Fehlerquadrate) der Splits je Merkmal, über alle {len(a.model.trees)} Bäume. Rechts: der mittlere absolute Fehler des Log-Verhältnisses auf den Trainingszeilen und auf den letzten 60 Trainingstagen (Validierung, dem Modell nicht gezeigt); "
+    f"Links: Anteil am Gain (Verbesserung der Fehlerquadrate) der Splits je Merkmal, über alle {len(a.model.trees)} Bäume. Rechts: der mittlere absolute Fehler des Log-Verhältnisses auf den Trainingszeilen und auf Zeilen, deren Zieltag in den letzten 60 Trainingstagen (Tag 670–729) liegt (Validierung, diese Zieltage kommen im Training nicht vor); "
     f"der Validierungsfehler ist nach Runde {best_round} am kleinsten ({de(float(a.curve_val[best_round - 1]), 4)}), nach {len(a.curve_val)} Runden {de(float(a.curve_val[-1]), 4)}. {len(a.model.trees)} Bäume mit zusammen {sum(t.n_leaves for t in a.model.trees)} Blättern."
 )
 
@@ -276,7 +276,7 @@ st.markdown(
 | **Erzeugte Portfolios, drei Seeds** | Das Vehikel erzeugt genau die Muster (multiplikativ, log-normal); echte Portfolios sind unordentlicher. Die Zahlen gelten für diese Portfolios. | – |
 """
 )
-st.caption("Die Linie: Naive Prognose → Exponentielle Glättung → ARIMA → Dynamische Regression, dazu Croston, **Boosting**, Prognoseintervalle, Hierarchie, Kombination, Bestand und ein vortrainiertes Netz (die übrigen Stücke noch nicht gebaut).")
+st.caption("Die Linie: Naive Prognose → Exponentielle Glättung → ARIMA → Dynamische Regression, dazu Croston, **Boosting**, Prognoseintervalle, Hierarchie, Kombination, Bestand und ein vortrainiertes Netz (alle Stücke der Linie sind inzwischen gebaut).")
 
 st.markdown("---")
 
@@ -289,7 +289,7 @@ Merkmale: $y_{i,t-k}/(\ell + 1)$ für $k = 1..7$, $y_{i,s-7(k_0+m)}/(\ell + 1)$ 
 **Boosting** (quadratischer Fehler). $F_0 = \bar z$, $F_m = F_{m-1} + \eta\,f_m$; $f_m$ ist ein Baum auf den Residuen $g_r = F_{m-1}(x_r) - z_r$ mit Hesse 1. Split-Gain $\tfrac12\big[\tfrac{G_L^2}{n_L + \lambda} + \tfrac{G_R^2}{n_R + \lambda} - \tfrac{G^2}{n + \lambda}\big]$, Blattwert $-G/(n + \lambda)$;
 Histogramm-Splits über 63 Quantil-Bins, blattweises Wachsen bis zur Blattzahl, Mindestzeilen je Blatt; das kleinere Kind wird histogrammiert, das größere per Differenz.
 
-**Training.** Je Depot alle vier Tage ein Ursprung, je Ursprung zwei zufällige Horizonte; Zieltage vor Tag 670. Die Zeilen mit Zieltagen in den letzten 60 Trainingstagen sind die Validierung der Lernkurve. **MASE** je Depot: MAE geteilt durch den mittleren absoluten Fehler der saisonal naiven Prognose (Periode 7) auf den Tagen vor 730; Mittel über die Depots.
+**Training.** Je Depot alle vier Tage ein Ursprung, je Ursprung zwei zufällige Horizonte; Zieltage vor Tag 670. Die Validierung der Lernkurve sind Zeilen mit Zieltagen ausschließlich in den letzten 60 Trainingstagen (670–729): Ursprünge ab Tag 670 − Horizont + 1, aber nur Horizonte, deren Zieltag mindestens 670 ist; kein Zieltag der Validierung kommt im Training vor. **MASE** je Depot: MAE geteilt durch den mittleren absoluten Fehler der saisonal naiven Prognose (Periode 7) auf den Tagen vor 730; Mittel über die Depots.
 **Lokale Verfahren:** Wochenmittel über vier Wochen; Holt-Winters multiplikativ (Stück 2); OLS im Log auf Konstante, Wochentage, Trend, zwei Fourier-Paare, Feiertag, Tag danach, Aktion (Stück 4), Prognose $e^{x'\hat\beta}$.
 
 Implementiert in `bf_tree.py` (Baumkern), `bf_gbm.py` (Boosting), `bf_features.py` (Zeilen, Merkmale, Ziel), `bf_baselines.py` (lokale Verfahren), `bf_scenario.py` (das Portfolio), `bf_evaluation.py` (Analyse, vier Experimente).
@@ -299,6 +299,6 @@ Implementiert in `bf_tree.py` (Baumkern), `bf_gbm.py` (Boosting), `bf_features.p
 st.markdown("---")
 st.caption(
     "Diese Demo ist Teil des Portfolios von [Sebastian Hanisch](https://sebastianhanisch.net) – "
-    "Operations Research und Machine Learning. Interesse an einer maßgeschneiderten Lösung für "
-    "Ihr Unternehmen? [Kontakt aufnehmen](https://sebastianhanisch.net/kontakt.html)"
+    "Operations Research und Machine Learning ([Über mich](https://sebastianhanisch.net/ueber-mich.html)). "
+    "Mehr zur Reihe: [Zeitreihen-Prognose: von Naiv bis Vortraining](https://sebastianhanisch.net/konzepte-zeitreihen-prognose.html)."
 )
