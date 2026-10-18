@@ -68,7 +68,7 @@ Die Preset-Zeilen sind **Einzelportfolios** (Seed 3); belastbar sind die Zeilen 
 
 ## Tests
 
-Pytest-Suite (`pytest tests/ -v`, 79 Tests, einige Minuten wegen der Experimente): Baumkern und Boosting von Hand, gegen `sklearn` und in ihren Eigenschaften (fallender Fehler, Gain-Anteile, seltene Binärmerkmale), die Merkmale Wert für Wert und ohne Blick in die Zukunft, die lokalen Verfahren gegen Schleifen und `lstsq`, das Portfolio, die Auswertung (Formen, Orakel, MASE, Unabhängigkeit von der Zukunft),
+Pytest-Suite (`pytest tests/ -v`, 82 Tests, einige Minuten wegen der Experimente): Baumkern und Boosting von Hand, gegen `sklearn` und in ihren Eigenschaften (fallender Fehler, Gain-Anteile, seltene Binärmerkmale), die Merkmale Wert für Wert und ohne Blick in die Zukunft, die lokalen Verfahren gegen Schleifen und `lstsq`, das Portfolio, die Auswertung (Formen, Orakel, MASE, Unabhängigkeit von der Zukunft),
 Preset- und Permalink-Klemmen, AppTest-Rauchtests (Standard, jedes Preset, Depot- und Ursprungs-Regler, leere Merkmalsauswahl, Extremwerte, vier Experimente auf Abruf, keine unaufgelösten Platzhalter) und `test_claims.py` (jede Zahl aus diesem README und aus den Preset-Hinweisen mit Bändern und Rangfolgen; die Bäume können sich bei Gleichständen zwischen Plattformen um Rundung verschieben).
 
 ## Dateistruktur
